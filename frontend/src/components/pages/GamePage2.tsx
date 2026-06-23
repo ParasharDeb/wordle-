@@ -430,7 +430,7 @@ export function GamePage2() {
             WORDLY
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.15em", color: "#f0f0f0" }}>
-            (FOR YOU)
+            (AM I GETTING LUCKY TONIGHT?)
           </div>
         </div>
 
