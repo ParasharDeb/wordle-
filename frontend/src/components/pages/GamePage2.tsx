@@ -12,11 +12,11 @@ const WORDS = [
   "olive","plank","quest","rebel","spunk","tacit","viola","wrist","brood","chasm",
 ];
 
-const TARGET = WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
-console.log(TARGET)
+const getRandomTarget = () => WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
+
 const KEYBOARD_ROWS = [
   ["Q","W","E","R","T","Y","U","I","O","P"],
-  ["A","S","D","F","G","H","J","K","L"], // Cleaned backslash formatting
+  ["A","S","D","F","G","H","J","K","L"], 
   ["ENTER","Z","X","C","V","B","N","M","⌫"],
 ];
 
@@ -80,7 +80,8 @@ function Tile({ letter, state, animState, delay = 0 }: {
     }
   }, [animState, state, delay]);
 
-  const colors = revealed && state ? COLOR[state] : null;
+  // FIX 1: Safely evaluating valid keys on COLOR dictionary map
+  const colors = revealed && state && COLOR[state] ? COLOR[state] : null;
 
   return (
     <div
@@ -146,7 +147,7 @@ function Row({ letters, colors, animState, bouncing }: {
             letter={letters[i] || ""}
             state={colors?.[i]}
             animState={animState === "flip" ? "flip" : animState === "pop" && letters[i] ? "pop" : undefined}
-            delay={i * 200} // Wordle standard staggered card flipping speed
+            delay={i * 200}
           />
         </div>
       ))}
@@ -161,7 +162,8 @@ function Key({ label, keyState, onPress }: {
   onPress: (k: string) => void;
 }) {
   const isWide = label === "ENTER" || label === "⌫";
-  const colors = keyState ? COLOR[keyState] : null;
+  // FIX 2: Safeguarded to match LetterState index bounds
+  const colors = keyState && COLOR[keyState] ? COLOR[keyState] : null;
 
   return (
     <button
@@ -262,8 +264,10 @@ function Confetti({ active }: { active: boolean }) {
 
 // ── Main Game ─────────────────────────────────────────────────────────────────
 export function GamePage2() {
+  // FIX 3: Explicitly typed matrix definition prevents assignment conflicts
+  const [targetWord, setTargetWord] = useState(getRandomTarget);
   const [grid, setGrid] = useState<string[][]>(Array.from({ length: 6 }, () => []));
-  const [colors, setColors] = useState<(LetterState[] | null)[]>(Array(6).fill(null));
+  const [colors, setColors] = useState<LetterState[][] | null[]>(Array(6).fill(null));
   const [currentRow, setCurrentRow] = useState(0);
   const [currentLetters, setCurrentLetters] = useState<string[]>([]);
   const [rowAnim, setRowAnim] = useState<RowAnimation[]>(Array(6).fill(null));
@@ -273,6 +277,11 @@ export function GamePage2() {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [flipping, setFlipping] = useState(false);
+
+  // Log target word for debugging
+  useEffect(() => {
+    console.log("Target Word:", targetWord);
+  }, [targetWord]);
 
   const showMsg = useCallback((m: string, dur = 1800) => {
     setMessage(m);
@@ -296,9 +305,11 @@ export function GamePage2() {
       return;
     }
     const guess = currentLetters.join("");
-    const guessColors = getColors(guess, TARGET);
+    const guessColors = getColors(guess, targetWord);
 
     setGrid(g => { const n = [...g]; n[currentRow] = [...currentLetters]; return n; });
+    
+    // FIX 4: Aligned array spread updates with new type definition
     setColors(c => { const n = [...c]; n[currentRow] = guessColors; return n; });
     setFlipping(true);
 
@@ -307,26 +318,28 @@ export function GamePage2() {
       setKeyStates(ks => {
         const next = { ...ks };
         currentLetters.forEach((l, i) => {
-          const cur = next[l] ? PRIORITY[next[l]] : 0;
+          const existingState = next[l];
+          // FIX 5: Fallback validation for prior keys prevents passing undefined into PRIORITY
+          const cur = existingState ? PRIORITY[existingState] : 0;
           if (PRIORITY[guessColors[i]] > cur) next[l] = guessColors[i];
         });
         return next;
       });
 
       const nextRow = currentRow + 1;
-      if (guess === TARGET) {
+      if (guess === targetWord) {
         setGameOver(true); setWon(true);
         setTimeout(() => setBouncingRow(currentRow), 100);
         setTimeout(() => showMsg("Brilliant! 🎉", -1), 400);
       } else if (nextRow === 6) {
         setGameOver(true);
-        showMsg(TARGET, -1);
+        showMsg(`The word was: ${targetWord}`, -1);
       } else {
         setCurrentRow(nextRow);
         setCurrentLetters([]);
       }
     });
-  }, [currentLetters, currentRow, flipping, showMsg, triggerAnim]);
+  }, [currentLetters, currentRow, flipping, showMsg, triggerAnim, targetWord]);
 
   const handleKey = useCallback((k: string) => {
     if (gameOver || flipping) return;
@@ -352,6 +365,22 @@ export function GamePage2() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [handleKey]);
+
+  // Handle Play Again state reset
+  const handlePlayAgain = () => {
+    setTargetWord(getRandomTarget());
+    setGrid(Array.from({ length: 6 }, () => []));
+    setColors(Array(6).fill(null));
+    setCurrentRow(0);
+    setCurrentLetters([]);
+    setRowAnim(Array(6).fill(null));
+    setBouncingRow(null);
+    setKeyStates({});
+    setMessage("");
+    setGameOver(false);
+    setWon(false);
+    setFlipping(false);
+  };
 
   const getRowLetters = (row: number) =>
     row === currentRow ? currentLetters : (grid[row] || []);
@@ -408,7 +437,7 @@ export function GamePage2() {
         <div style={{ width: "100%", maxWidth: 350, height: "1px", background: "#3a3a3c", marginBottom: "1.5rem" }} />
 
         {/* Grid */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: "2rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: "1rem" }}>
           {Array.from({ length: 6 }).map((_, r) => (
             <Row
               key={r}
@@ -420,28 +449,56 @@ export function GamePage2() {
           ))}
         </div>
 
-        {/* Message */}
-        <div
-          style={{
-            height: 32,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#ffffff",
-            background: message ? "#3a3a3c" : "transparent",
-            padding: message ? "0 12px" : 0,
-            borderRadius: 4,
-            letterSpacing: "0.04em",
-            marginBottom: "1.5rem",
-          }}
-        >
-          {message}
+        {/* Message and Play Again Section */}
+        <div style={{ height: 48, display: "flex", alignItems: "center", gap: 16, marginBottom: "1rem" }}>
+          {message && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#ffffff",
+                background: "#3a3a3c",
+                padding: "6px 12px",
+                borderRadius: 4,
+                letterSpacing: "0.04em",
+              }}
+            >
+              {message}
+            </div>
+          )}
+          
+          {/* PLAY AGAIN BUTTON */}
+          {gameOver && (
+            <button
+              onClick={handlePlayAgain}
+              style={{
+                padding: "8px 16px",
+                background: "#006039",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 4,
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                boxShadow: "0px 4px 10px rgba(0,0,0,0.3)",
+                transition: "background 0.2s ease",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#007a49"}
+              onMouseLeave={e => e.currentTarget.style.background = "#006039"}
+            >
+              Play Again 🔄
+            </button>
+          )}
         </div>
 
         {/* Keyboard */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center", padding: "0 8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center", padding: "0 4px" }}>
           {KEYBOARD_ROWS.map((row, ri) => (
             <div key={ri} style={{ display: "flex", gap: 6 }}>
               {row.map(k => (
