@@ -12,7 +12,7 @@ const WORDS = [
   "olive","plank","quest","rebel","spunk","tacit","viola","wrist","brood","chasm",
 ];
 
-const getRandomTarget = () => WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
+// const getRandomTarget = () => WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
 
 const KEYBOARD_ROWS = [
   ["Q","W","E","R","T","Y","U","I","O","P"],
@@ -430,7 +430,7 @@ export function GamePage2() {
             WORDLY
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.15em", color: "#f0f0f0" }}>
-            (AM I GETTING LUCKY TONIGHT?)
+            (FOR YOU BEBU)
           </div>
         </div>
 
