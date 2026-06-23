@@ -12,7 +12,7 @@ const WORDS = [
   "olive","plank","quest","rebel","spunk","tacit","viola","wrist","brood","chasm",
 ];
 
-// const getRandomTarget = () => WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
+const getRandomTarget = () => WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
 
 const KEYBOARD_ROWS = [
   ["Q","W","E","R","T","Y","U","I","O","P"],
